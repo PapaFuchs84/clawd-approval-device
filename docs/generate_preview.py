@@ -74,6 +74,36 @@ def draw_badge(draw: ImageDraw.ImageDraw, cx, cy, kind, color):
         draw.line((cx - 4, cy + 4, cx + 4, cy - 4), fill=BLACK, width=2)
 
 
+GREEN = (0x00, 0xE0, 0x40)
+RED = (0xFF, 0x30, 0x30)
+
+
+def draw_confirm_hints(draw: ImageDraw.ImageDraw):
+    """Right-edge icons on the WAITING_APPROVAL screen, vertically aligned
+    with the two physical buttons (both on the right edge of the case):
+    a green check near the top button, a red X near the bottom button. Icons
+    only, no text - the case is narrow enough that the icon position next to
+    each physical button is the label.
+
+    NOTE: top=Approve/bottom=Deny is a starting assumption to validate on
+    real hardware (both buttons sit on the same edge, so which one is
+    physically "top" isn't visible from the code/GPIO numbers alone). If it
+    turns out to be backwards for your case, swap the two blocks below.
+    """
+    cx = DISPLAY_W - 14
+
+    # Top icon: green check (assumed Approve / GPIO0)
+    cy = 34
+    draw.ellipse((cx - 10, cy - 10, cx + 10, cy + 10), fill=GREEN, outline=BLACK, width=1)
+    draw.line((cx - 4, cy, cx - 1, cy + 4, cx + 5, cy - 5), fill=BLACK, width=2)
+
+    # Bottom icon: red X (assumed Deny / GPIO35)
+    cy = DISPLAY_H - 34
+    draw.ellipse((cx - 10, cy - 10, cx + 10, cy + 10), fill=RED, outline=BLACK, width=1)
+    draw.line((cx - 5, cy - 5, cx + 5, cy + 5), fill=BLACK, width=2)
+    draw.line((cx - 5, cy + 5, cx + 5, cy - 5), fill=BLACK, width=2)
+
+
 def wrap_text(draw, text, font, max_width):
     words = text.split(" ")
     lines, cur = [], ""
@@ -106,9 +136,14 @@ def render_state(state: str) -> Image.Image:
 
     text_font = ImageFont.truetype(FONT_PATH_REGULAR, 12)
     text_x = SPRITE_X + SPRITE_SIZE + 8
-    max_width = DISPLAY_W - text_x - 4
+    # Leave a right-edge gutter for the approve/deny icons on the confirm screen
+    right_margin = 30 if state == "WAITING_APPROVAL" else 4
+    max_width = DISPLAY_W - text_x - right_margin
     for i, line in enumerate(wrap_text(draw, summary, text_font, max_width)):
         draw.text((text_x, 32 + i * 14), line, font=text_font, fill=WHITE)
+
+    if state == "WAITING_APPROVAL":
+        draw_confirm_hints(draw)
 
     return img.resize((DISPLAY_W * SCALE, DISPLAY_H * SCALE), Image.NEAREST)
 

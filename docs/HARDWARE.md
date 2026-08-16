@@ -64,3 +64,28 @@ pio run -t upload
 If the upload fails with a handshake/connect error, try a lower
 `upload_speed` in `platformio.ini` (e.g. `115200`) — some USB-serial chips
 and cables are unreliable at higher baud rates.
+
+## 5. Validate which physical button is which
+
+On the T-Display, both buttons sit on the same case edge, so which one is
+physically "top" vs "bottom" depends on your specific case/mount — it can't
+be derived from the GPIO numbers alone. After flashing, trigger a test
+approval request and press each button once to confirm which is which:
+
+```bash
+python3 -c '
+import socket, json
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(30)
+s.connect("/tmp/clawd-approval.sock")
+s.sendall((json.dumps({"summary": "button orientation test"}) + "\n").encode())
+print(s.recv(4096).decode())
+'
+```
+
+Watch `daemon.log` for `[BUTTON] approve ...` or `[BUTTON] deny ...` to see
+which physical button you pressed. If the on-screen icons (see
+`drawConfirmIcons()` in `firmware/src/main.cpp`) don't match, swap
+`PIN_BUTTON_APPROVE`/`PIN_BUTTON_DENY` in `firmware/platformio.ini` and
+reflash — this changes which physical button *is* approve/deny, so the
+already-correct icon positions don't need to move.

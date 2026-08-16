@@ -69,6 +69,22 @@ static void drawBadge(TFT_eSPI &gfx, int cx, int cy, char type, uint16_t color, 
   }
 }
 
+// Right-edge icons on the WAITING_APPROVAL screen, vertically aligned with
+// the two physical buttons (both sit on the right edge of the T-Display
+// case): a green check near the top button, a red X near the bottom
+// button. Icon only, no text - the case is narrow enough that the icon's
+// position next to each physical button is the label.
+//
+// NOTE: top=Approve/bottom=Deny matches PIN_BUTTON_APPROVE/PIN_BUTTON_DENY
+// in platformio.ini on the reference build. Both buttons sit on the same
+// case edge, so if your physical top/bottom is reversed, swap the values
+// in platformio.ini (not just the icons here) - see docs/HARDWARE.md.
+static void drawConfirmIcons(TFT_eSPI &gfx) {
+  const int cx = 240 - 14;
+  drawBadge(gfx, cx, 34, 'v', COLOR_SUCCESS);               // top: Approve
+  drawBadge(gfx, cx, 135 - 34, 'x', COLOR_ERROR);            // bottom: Deny
+}
+
 // Simple word wrap for the summary column next to the sprite.
 static void drawWrapped(const String &text, int x, int y, int maxWidth, int lineHeight, int maxY) {
   int start = 0;
@@ -180,11 +196,17 @@ static void renderClawdState(const String &state, const String &summary) {
   tft.setCursor(6, 4);
   tft.print(label);
 
-  // Summary text on the right, word-wrapped
+  // Summary text on the right, word-wrapped. Leave a right-edge gutter for
+  // the approve/deny icons on the confirm screen.
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.setTextSize(1);
   const int textX = SPRITE_BASE_X + SPRITE_SIZE + 8;
-  drawWrapped(summary, textX, 32, 240 - textX - 4, 12, 128);
+  const int rightMargin = (state == "WAITING_APPROVAL") ? 30 : 4;
+  drawWrapped(summary, textX, 32, 240 - textX - rightMargin, 12, 128);
+
+  if (state == "WAITING_APPROVAL") {
+    drawConfirmIcons(tft);
+  }
 
   animateTick();  // draw the first frame immediately, don't wait 80ms
 }
