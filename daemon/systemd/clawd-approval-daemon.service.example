@@ -1,0 +1,25 @@
+# Example systemd unit for running daemon.py persistently.
+#
+# Adjust the paths below to your install location, then:
+#   sudo cp clawd-approval-daemon.service.example /etc/systemd/system/clawd-approval-daemon.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now clawd-approval-daemon.service
+
+[Unit]
+Description=Clawd Approval Daemon (Claude Code approve/deny bridge to the ESP32 device)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/path/to/clawd-approval-device/daemon
+EnvironmentFile=/path/to/clawd-approval-device/daemon/.env
+ExecStart=/path/to/clawd-approval-device/daemon/.venv/bin/python -u daemon.py
+Restart=always
+RestartSec=3
+StandardInput=null
+StandardOutput=append:/path/to/clawd-approval-device/daemon/daemon.log
+StandardError=append:/path/to/clawd-approval-device/daemon/daemon.log
+
+[Install]
+WantedBy=multi-user.target

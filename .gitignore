@@ -1,0 +1,23 @@
+# Secrets - never commit
+firmware/include/secrets.h
+daemon/.env
+
+# PlatformIO
+firmware/.pio/
+firmware/.vscode/
+
+# Python
+daemon/.venv/
+firmware/tools/.venv/
+__pycache__/
+*.pyc
+
+# Generated sprite render intermediates (regenerate via svg_to_rgb565.py)
+firmware/tools/svg/*.png
+
+# Daemon runtime files
+daemon/*.log
+daemon/*.sock
+
+# OS cruft
+.DS_Store

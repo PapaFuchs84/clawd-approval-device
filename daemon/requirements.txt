@@ -1,0 +1,5 @@
+websockets==12.0
+# Hinweis: neuere websockets-Versionen (>=13, neuer asyncio-Parser) haben einen
+# Kompatibilitaetsbug mit dem HTTP-Upgrade-Request der Arduino-WebSocket-Bibliothek
+# (RuntimeError "Cannot call write() after write_eof()" beim Handshake). Getestet
+# und funktionsfaehig mit 12.0.
