@@ -3,7 +3,15 @@
 A physical approve/deny button box for [Claude Code](https://claude.com/claude-code), built by repurposing an ESP32-based [NerdMiner](https://github.com/BitMaker-hub/NerdMiner_v2) (LilyGO/TTGO T-Display). It shows live Claude Code session activity (idle, working, waiting for approval, success, error, disconnected) as an animated [Clawd](https://github.com/marciogranzotto/clawd-tank) crab mascot, and lets you approve or deny pending tool calls with two physical buttons — **as an alternative to the normal digital confirmation dialog, not a replacement for it.**
 
 <p align="center">
-  <em>IDLE · WORKING · WAITING_APPROVAL · SUCCESS · ERROR · DISCONNECTED</em>
+  <img src="docs/images/idle.png" width="140" alt="IDLE state">
+  <img src="docs/images/working.png" width="140" alt="WORKING state">
+  <img src="docs/images/waiting_approval.png" width="140" alt="WAITING_APPROVAL state">
+  <br>
+  <img src="docs/images/success.png" width="140" alt="SUCCESS state">
+  <img src="docs/images/error.png" width="140" alt="ERROR state">
+  <img src="docs/images/disconnected.png" width="140" alt="DISCONNECTED state">
+  <br>
+  <sub>Mockups rendered from the actual generated sprite data via <code>docs/generate_preview.py</code> — layout and colors match the real 240×135 display exactly (the physical display also animates each state, see firmware/src/main.cpp).</sub>
 </p>
 
 ## Why this exists
