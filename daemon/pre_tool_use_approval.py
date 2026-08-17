@@ -91,16 +91,12 @@ def main():
         respond("ask", f"Unexpected error during approval request: {e!r} -> normal dialog")
         return
 
-    # Only an EXPLICIT button event decides actively. Everything else
-    # (timeout/unreachable/busy - nobody responded, or the daemon was
-    # already handling a different concurrent approval) -> 'ask', NEVER
-    # 'allow'.
+    # Only an EXPLICIT button event decides actively. 'timeout'/'unreachable'
+    # (nobody responded) -> 'ask', NEVER 'allow'.
     if result == "approve":
         respond("allow")
     elif result == "deny":
         respond("deny", "Rejected on the physical device")
-    elif result == "busy":
-        respond("ask", "Approval daemon already busy with another request -> normal confirmation dialog")
     else:
         respond("ask", f"No response on the device ({result}) -> normal confirmation dialog")
 
