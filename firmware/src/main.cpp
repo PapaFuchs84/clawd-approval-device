@@ -23,6 +23,14 @@ String currentRequestId = "";
 bool wsConnected = false;
 uint32_t eventCounter = 0;
 
+// WiFi watchdog: WiFi.setAutoReconnect(true) handles most drops, but not
+// every disconnect reason reliably across arduino-esp32 core versions. This
+// is unattended hardware - a device that silently stays disconnected until
+// someone notices and power-cycles it defeats the point. Poll periodically
+// and force a reconnect attempt if we're still down.
+const uint32_t WIFI_CHECK_INTERVAL_MS = 5000;
+uint32_t lastWifiCheckMs = 0;
+
 static void drawStatus(const String &line1, const String &line2) {
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -282,7 +290,16 @@ static void handleStateMessage(JsonDocument &doc) {
   const char *summary = doc["summary"] | "";
   const char *msgId = doc["msg_id"] | "";
 
-  currentRequestId = String(reqId);
+  // Only a WAITING_APPROVAL message carries a real request_id - status
+  // broadcasts (WORKING/SUCCESS/ERROR/IDLE) always send request_id="" (see
+  // daemon.py show_state()). Overwriting currentRequestId unconditionally
+  // here used to let such a status update wipe out a still-pending approval
+  // ID mid-decision, silently disarming the physical buttons for a request
+  // the human hadn't answered yet. Any other state must leave a pending ID
+  // alone.
+  if (strcmp(state, "WAITING_APPROVAL") == 0) {
+    currentRequestId = String(reqId);
+  }
 
   Serial.printf("[STATE] %s request_id=%s summary=%s\n", state, reqId, summary);
   renderClawdState(String(state), String(summary));
@@ -350,19 +367,29 @@ void setup() {
   btnDeny.attachClick(onDenyPress);
 
   WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   drawStatus("Connecting WiFi...", WIFI_SSID);
 
-  uint32_t start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
+  // Retry indefinitely instead of giving up after a fixed timeout: this is
+  // unattended hardware, so a device that gives up after 15s and never
+  // tries again would need a manual power cycle to recover from a WiFi
+  // outage that happens to overlap with boot (e.g. router rebooting at the
+  // same time). WiFi.begin() is re-issued periodically in case the first
+  // attempt landed in a state the radio can't recover from on its own.
+  uint32_t wifiAttemptStart = millis();
+  uint32_t lastRetryElapsed = 0;
+  while (WiFi.status() != WL_CONNECTED) {
     delay(250);
     Serial.print(".");
-  }
-
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("\nWiFi connection failed (timeout)");
-    drawStatus("WIFI ERROR", "Timeout after 15s");
-    return;
+    uint32_t elapsed = millis() - wifiAttemptStart;
+    if (elapsed - lastRetryElapsed > 15000) {
+      lastRetryElapsed = elapsed;
+      Serial.println("\nStill no WiFi after 15s, retrying WiFi.begin()...");
+      drawStatus("Connecting WiFi...", WIFI_SSID + String(" (retry)"));
+      WiFi.disconnect();
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    }
   }
 
   Serial.printf("\nWiFi connected, IP: %s\n", WiFi.localIP().toString().c_str());
@@ -390,6 +417,15 @@ void loop() {
   btnDeny.tick();
 
   uint32_t now = millis();
+
+  if (now - lastWifiCheckMs >= WIFI_CHECK_INTERVAL_MS) {
+    lastWifiCheckMs = now;
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("[WIFI] Not connected, forcing reconnect");
+      WiFi.reconnect();
+    }
+  }
+
   if (now - lastAnimDrawMs >= 80) {  // ~12 fps, smooth enough for these small movements
     lastAnimDrawMs = now;
     animateTick();
